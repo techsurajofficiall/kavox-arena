@@ -22,25 +22,36 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Fix All Pubspec and Gradle
+      - name: Fix Project and Gradle Wrapper
         run: |
-          echo "Fixing ALL pubspec.yaml files..."
           find . -name "pubspec.yaml" -exec sed -i 's/kavox-arena/kavox_arena/g' {} \;
-          find . -name "pubspec.yaml" -exec sed -i 's/Kavox Arena/kavox_arena/g' {} \;
-          find . -name "pubspec.yaml" -exec cat {} \; | head -n 20
-          
           PROJECT_DIR=$(find . -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
-          echo "Project at: $PROJECT_DIR"
-          
-          echo "Fixing gradle wrapper without flutter create..."
           cd "$PROJECT_DIR"
+          echo "Downloading fresh gradle wrapper..."
           mkdir -p android/gradle/wrapper
-          # Copy working wrapper from Flutter SDK itself
-          cp $FLUTTER_ROOT/packages/flutter_tools/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/ || true
-          cp $FLUTTER_ROOT/packages/flutter_tools/gradle/wrapper/gradle-wrapper.properties android/gradle/wrapper/ || true
-          chmod +x android/gradlew || true
+          
+          # Create properties file
+          cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-all.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+          
+          # Download working jar from Gradle repo
+          curl -L -o android/gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.5.0/gradle/wrapper/gradle-wrapper.jar
+          
+          # Ensure gradlew exists, if not copy template
+          if [ ! -f android/gradlew ]; then
+            cp $FLUTTER_ROOT/packages/flutter_tools/gradle/gradlew android/gradlew || echo "gradlew template not found"
+          fi
+          chmod +x android/gradlew
           ls -lh android/gradle/wrapper/
+          ls -lh android/gradlew
 
       - name: Build APK
         run: |
