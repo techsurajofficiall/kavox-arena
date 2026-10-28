@@ -5,25 +5,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip Project
+      
+      - name: Find and Unzip
         run: |
-          unzip -o "kavox-arena (4).zip" -d extracted
+          echo "Finding zip..."
+          find . -name "*.zip"
+          ZIP=$(find . -name "*.zip" | head -n 1)
+          echo "Unzipping $ZIP"
+          unzip -o "$ZIP" -d extracted
+          ls -la extracted
+          # Move content to root
           mv extracted/*/* . 2>/dev/null || mv extracted/* . 2>/dev/null || true
+          rm -rf extracted
           ls -la
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.0'
           channel: 'stable'
+
       - name: Build APK
         run: |
           flutter pub get
           flutter build apk --release
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
