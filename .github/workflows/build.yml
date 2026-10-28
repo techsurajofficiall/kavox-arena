@@ -22,19 +22,25 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Fix Project Name and Gradle
+      - name: Fix All Pubspec and Gradle
         run: |
+          echo "Fixing ALL pubspec.yaml files..."
+          find . -name "pubspec.yaml" -exec sed -i 's/kavox-arena/kavox_arena/g' {} \;
+          find . -name "pubspec.yaml" -exec sed -i 's/Kavox Arena/kavox_arena/g' {} \;
+          find . -name "pubspec.yaml" -exec cat {} \; | head -n 20
+          
           PROJECT_DIR=$(find . -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Project at: $PROJECT_DIR"
+          
+          echo "Fixing gradle wrapper without flutter create..."
           cd "$PROJECT_DIR"
-          echo "Fixing pubspec.yaml name..."
-          sed -i 's/name: kavox-arena/name: kavox_arena/g' pubspec.yaml
-          sed -i 's/name: Kavox Arena/name: kavox_arena/g' pubspec.yaml
-          cat pubspec.yaml | head -n 20
-          echo "Recreating android folder..."
-          rm -rf android/gradle/wrapper
-          flutter create --platforms=android . --overwrite
-          chmod +x android/gradlew
+          mkdir -p android/gradle/wrapper
+          # Copy working wrapper from Flutter SDK itself
+          cp $FLUTTER_ROOT/packages/flutter_tools/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/ || true
+          cp $FLUTTER_ROOT/packages/flutter_tools/gradle/wrapper/gradle-wrapper.properties android/gradle/wrapper/ || true
+          chmod +x android/gradlew || true
+          ls -lh android/gradle/wrapper/
 
       - name: Build APK
         run: |
