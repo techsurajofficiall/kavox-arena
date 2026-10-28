@@ -5,33 +5,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Unzip Project
-        run: |
-          find . -type f -name "*.zip" -exec unzip -q -o {} \;
-
+        run: find . -type f -name "*.zip" -exec unzip -q -o {} \;
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '17'
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
-
       - name: Fix Project and Gradle Wrapper
         run: |
           find . -name "pubspec.yaml" -exec sed -i 's/kavox-arena/kavox_arena/g' {} \;
           PROJECT_DIR=$(find . -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
           cd "$PROJECT_DIR"
-          echo "Downloading fresh gradle wrapper..."
           mkdir -p android/gradle/wrapper
-          
-          # Create properties file
           cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
@@ -41,26 +33,14 @@ jobs:
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           EOF
-          
-          # Download working jar from Gradle repo
           curl -L -o android/gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.5.0/gradle/wrapper/gradle-wrapper.jar
-          
-          # Ensure gradlew exists, if not copy template
-          if [ ! -f android/gradlew ]; then
-            cp $FLUTTER_ROOT/packages/flutter_tools/gradle/gradlew android/gradlew || echo "gradlew template not found"
-          fi
           chmod +x android/gradlew
-          ls -lh android/gradle/wrapper/
-          ls -lh android/gradlew
-
-      - name: Build APK
+      - name: Build APK - Show Full Error
         run: |
           cd ${{ env.PROJECT_DIR }}
           flutter pub get
-          flutter build apk --release
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: kavox-arena-apk
-          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          echo "=== Building ==="
+          cd android
+          ./gradlew assembleRelease --stacktrace 2>&1 | tee gradle-log.txt
+          echo "=== ERROR SUMMARY ==="
+          cat gradle-log.txt | grep -A 30 "What went wrong" || cat gradle-log.txt | grep -A 30 "FAILURE" || tail -n 100 gradle-log.txt
