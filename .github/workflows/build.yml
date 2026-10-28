@@ -22,12 +22,16 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Fix Gradle
+      - name: Fix Project Name and Gradle
         run: |
           PROJECT_DIR=$(find . -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
           cd "$PROJECT_DIR"
-          # Recreate only wrapper jar properly
+          echo "Fixing pubspec.yaml name..."
+          sed -i 's/name: kavox-arena/name: kavox_arena/g' pubspec.yaml
+          sed -i 's/name: Kavox Arena/name: kavox_arena/g' pubspec.yaml
+          cat pubspec.yaml | head -n 20
+          echo "Recreating android folder..."
           rm -rf android/gradle/wrapper
           flutter create --platforms=android . --overwrite
           chmod +x android/gradlew
