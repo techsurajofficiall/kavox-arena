@@ -17,7 +17,7 @@ jobs:
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
-      - name: Fix Project and Gradle Wrapper
+      - name: Fix and Build
         run: |
           find . -name "pubspec.yaml" -exec sed -i 's/kavox-arena/kavox_arena/g' {} \;
           PROJECT_DIR=$(find . -type f -name "pubspec.yaml" -exec dirname {} \; | head -n 1)
@@ -28,19 +28,17 @@ jobs:
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-all.zip
-          networkTimeout=10000
-          validateDistributionUrl=true
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           EOF
           curl -L -o android/gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.5.0/gradle/wrapper/gradle-wrapper.jar
           chmod +x android/gradlew
-      - name: Build APK - Show Full Error
-        run: |
-          cd ${{ env.PROJECT_DIR }}
           flutter pub get
-          echo "=== Building ==="
-          cd android
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee gradle-log.txt
-          echo "=== ERROR SUMMARY ==="
-          cat gradle-log.txt | grep -A 30 "What went wrong" || cat gradle-log.txt | grep -A 30 "FAILURE" || tail -n 100 gradle-log.txt
+          flutter build apk --release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kavox-arena-apk
+          path: |
+            **/build/app/outputs/flutter-apk/app-release.apk
+            **/build/app/outputs/apk/release/app-release.apk
